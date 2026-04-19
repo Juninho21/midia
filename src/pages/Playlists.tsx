@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, ListVideo, Clock, Play, Trash2, ArrowRight, Save, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, ListVideo, Clock, Trash2, ArrowRight, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const Playlists = () => {

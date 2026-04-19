@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, MonitorPlay, Image as ImageIcon, ListVideo, Settings } from 'lucide-react';
 
