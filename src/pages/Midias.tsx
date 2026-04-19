@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UploadCloud, Image as ImageIcon, FileVideo, FileText, Trash2, RefreshCw, DollarSign, Bitcoin, CloudRain, LayoutDashboard, Plus } from 'lucide-react';
+import { UploadCloud, Image as ImageIcon, FileVideo, FileText, Trash2, RefreshCw, DollarSign, Bitcoin, CloudRain, LayoutDashboard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const Midias = () => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Cloud, CloudRain, Sun, DollarSign, Bitcoin, Thermometer } from 'lucide-react';
+import { Cloud, CloudRain, Sun, DollarSign, Bitcoin } from 'lucide-react';
 
 interface WidgetDisplayProps {
   cidade: string;
