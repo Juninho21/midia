@@ -26,50 +26,54 @@ const Midias = () => {
   }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
     setUploading(true);
     
-    // Gerar um nome de arquivo único
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
     try {
-      // 1. Upload para o Storage
-      const { error: uploadError } = await supabase.storage
-        .from('midias')
-        .upload(filePath, file);
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Gerar um nome de arquivo único
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-      if (uploadError) throw uploadError;
+        // 1. Upload para o Storage
+        const { error: uploadError } = await supabase.storage
+          .from('midias')
+          .upload(filePath, file);
 
-      // 2. Obter a URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('midias')
-        .getPublicUrl(filePath);
+        if (uploadError) throw uploadError;
 
-      // 3. Determinar o tipo
-      let type = 'image';
-      if (file.type.startsWith('video/')) type = 'video';
-      else if (file.type === 'application/pdf') type = 'pdf';
+        // 2. Obter a URL pública
+        const { data: { publicUrl } } = supabase.storage
+          .from('midias')
+          .getPublicUrl(filePath);
 
-      // 4. Salvar na tabela midias
-      const { error: dbError } = await supabase.from('midias').insert([
-        { 
-          name: file.name, 
-          type, 
-          url: publicUrl,
-          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-        }
-      ]);
+        // 3. Determinar o tipo
+        let type = 'image';
+        if (file.type.startsWith('video/')) type = 'video';
+        else if (file.type === 'application/pdf') type = 'pdf';
 
-      if (dbError) throw dbError;
+        // 4. Salvar na tabela midias
+        const { error: dbError } = await supabase.from('midias').insert([
+          { 
+            name: file.name, 
+            type, 
+            url: publicUrl,
+            size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+          }
+        ]);
 
-      // Atualiza a lista
+        if (dbError) throw dbError;
+      });
+
+      await Promise.all(uploadPromises);
+
+      // Atualiza a lista após todos os uploads
       carregarMidias();
     } catch (error: any) {
-      alert('Erro ao fazer upload: ' + error.message);
+      alert('Erro ao fazer upload de um ou mais arquivos: ' + error.message);
     } finally {
       setUploading(false);
       // Limpar o input
@@ -159,6 +163,7 @@ const Midias = () => {
         {/* Input escondido para o upload */}
         <input 
           type="file" 
+          multiple
           ref={fileInputRef}
           onChange={handleFileUpload}
           accept="image/*,video/mp4,application/pdf"
