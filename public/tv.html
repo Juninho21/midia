@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safe Midia - Player</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    #player {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      background: #000;
+      overflow: hidden;
+    }
+    #bg-blur {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-size: cover;
+      background-position: center;
+      -webkit-filter: blur(25px) brightness(0.6);
+              filter: blur(25px) brightness(0.6);
+      -webkit-transform: scale(1.1);
+          -ms-transform: scale(1.1);
+              transform: scale(1.1);
+      z-index: 0;
+      display: none;
+    }
+    #media-img {
+      position: relative;
+      z-index: 1;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      display: none;
+      -o-object-fit: contain;
+         object-fit: contain;
+    }
+    #media-video {
+      width: 100%; height: 100%;
+      -o-object-fit: contain;
+         object-fit: contain;
+      display: none;
+    }
+    #widget-screen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: none;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      background: #0f172a;
+      text-align: center;
+      z-index: 2;
+    }
+    #widget-title { font-size: 3rem; color: #94a3b8; margin-bottom: 1rem; }
+    #widget-value { font-size: 7rem; font-weight: bold; color: #fff; }
+    #widget-desc { font-size: 2.5rem; color: #64748b; margin-top: 1rem; }
+    #code-screen {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      -webkit-box-align: center;
+          -ms-flex-align: center;
+              align-items: center;
+      -webkit-box-pack: center;
+          -ms-flex-pack: center;
+              justify-content: center;
+      height: 100vh;
+      background: #0f172a;
+      text-align: center;
+    }
+    #code-screen h2 { font-size: 2.5rem; margin-bottom: 1rem; }
+    #code-screen p { font-size: 1.2rem; color: #94a3b8; margin-bottom: 2rem; }
+    #code-display {
+      font-size: 5rem;
+      font-weight: bold;
+      letter-spacing: 0.2em;
+      color: #3b82f6;
+      margin-bottom: 2rem;
+    }
+    #status-text { font-size: 1rem; color: #64748b; }
+  </style>
+</head>
+<body>
+
+  <div id="code-screen">
+    <h2>Vincule esta TV</h2>
+    <p>Acesse seu dashboard e cadastre a tela usando este codigo:</p>
+    <div id="code-display"></div>
+    <div id="status-text">Aguardando configuracao no painel...</div>
+  </div>
+
+  <div id="player" style="display:none;">
+    <div id="bg-blur"></div>
+    <img id="media-img" src="" alt="Midia" />
+    <video id="media-video" src="" autoplay muted playsinline></video>
+    <div id="widget-screen">
+      <div id="widget-title"></div>
+      <div id="widget-value"></div>
+      <div id="widget-desc"></div>
+    </div>
+  </div>
+
+  <script>
+    // =============================================
+    // CONFIGURACAO DO SUPABASE
+    // =============================================
+    var SUPABASE_URL = 'https://fswmfchlbrolrkbqqebv.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzd21mY2hsYnJvbHJrYnFxZWJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MDE0NTYsImV4cCI6MjA5MjE3NzQ1Nn0.nkblA-b_77I6bRfc3zo7cy2Oxla8wne35_wv1v3jIRc';
+
+    // =============================================
+    // ESTADO GLOBAL
+    // =============================================
+    var playlist = [];
+    var currentIndex = 0;
+    var telaId = null;
+    var cidade = 'Sao Paulo';
+    var mediaTimer = null;
+    var pollInterval = null;
+
+    // =============================================
+    // PEGAR CODIGO DA URL: /tv.html?code=XXXX
+    // =============================================
+    function getCode() {
+      var search = window.location.search || '';
+      var match = search.match(/[?&]code=([A-Z0-9-]+)/i);
+      return match ? match[1] : null;
+    }
+
+    // =============================================
+    // CHAMADA REST DO SUPABASE (sem SDK)
+    // =============================================
+    function supabaseGet(path, callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', SUPABASE_URL + '/rest/v1/' + path, true);
+      xhr.setRequestHeader('apikey', SUPABASE_KEY);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            callback(null, data);
+          } catch(e) {
+            callback(e, null);
+          }
+        }
+      };
+      xhr.send();
+    }
+
+    function supabasePatch(path, body) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('PATCH', SUPABASE_URL + '/rest/v1/' + path, true);
+      xhr.setRequestHeader('apikey', SUPABASE_KEY);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Prefer', 'return=minimal');
+      xhr.send(JSON.stringify(body));
+    }
+
+    function fetchJson(url, callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            callback(null, data);
+          } catch(e) { callback(e, null); }
+        }
+      };
+      xhr.send();
+    }
+
+    // =============================================
+    // EXIBIÇÃO DE MÍDIA
+    // =============================================
+    var imgEl    = document.getElementById('media-img');
+    var videoEl  = document.getElementById('media-video');
+    var bgBlur   = document.getElementById('bg-blur');
+    var widgetEl = document.getElementById('widget-screen');
+
+    function hideAll() {
+      imgEl.style.display = 'none';
+      videoEl.style.display = 'none';
+      bgBlur.style.display = 'none';
+      widgetEl.style.display = 'none';
+    }
+
+    function showMedia(item) {
+      hideAll();
+      if (mediaTimer) clearTimeout(mediaTimer);
+
+      if (item.type === 'image' || item.type === 'pdf') {
+        bgBlur.style.backgroundImage = 'url(' + item.url + ')';
+        bgBlur.style.display = 'block';
+        imgEl.src = item.url;
+        imgEl.style.display = 'block';
+        mediaTimer = setTimeout(nextMedia, item.duration);
+
+      } else if (item.type === 'video') {
+        videoEl.src = item.url;
+        videoEl.style.display = 'block';
+        videoEl.play();
+        videoEl.onended = nextMedia;
+        videoEl.onerror = nextMedia;
+
+      } else if (item.type === 'widget') {
+        widgetEl.style.display = '-webkit-box';
+        widgetEl.style.display = '-ms-flexbox';
+        widgetEl.style.display = 'flex';
+        loadWidget(item.url, function() {
+          mediaTimer = setTimeout(nextMedia, item.duration);
+        });
+      }
+    }
+
+    function nextMedia() {
+      if (playlist.length === 0) return;
+      currentIndex = (currentIndex + 1) % playlist.length;
+      showMedia(playlist[currentIndex]);
+    }
+
+    // =============================================
+    // WIDGETS
+    // =============================================
+    function loadWidget(widgetUrl, done) {
+      var titleEl = document.getElementById('widget-title');
+      var valueEl = document.getElementById('widget-value');
+      var descEl  = document.getElementById('widget-desc');
+      descEl.textContent = '';
+
+      if (widgetUrl === 'widget:dolar' || widgetUrl === 'widget:bitcoin') {
+        fetchJson('https://economia.awesomeapi.com.br/json/last/USD-BRL,BTC-BRL', function(err, data) {
+          if (err || !data) { valueEl.textContent = '--'; done(); return; }
+          if (widgetUrl === 'widget:dolar' && data.USDBRL) {
+            titleEl.textContent = 'Cotacao do Dolar';
+            valueEl.textContent = 'R$ ' + parseFloat(data.USDBRL.bid).toFixed(2).replace('.', ',');
+          }
+          if (widgetUrl === 'widget:bitcoin' && data.BTCBRL) {
+            titleEl.textContent = 'Cotacao do Bitcoin';
+            var btc = parseFloat(data.BTCBRL.bid);
+            valueEl.textContent = 'R$ ' + btc.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+          }
+          done();
+        });
+      } else if (widgetUrl === 'widget:weather') {
+        fetchJson('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(cidade) + '&count=1&language=pt', function(err, geo) {
+          if (err || !geo || !geo.results || geo.results.length === 0) { valueEl.textContent = '--'; done(); return; }
+          var lat = geo.results[0].latitude;
+          var lon = geo.results[0].longitude;
+          fetchJson('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true', function(err2, weather) {
+            if (err2 || !weather || !weather.current_weather) { valueEl.textContent = '--'; done(); return; }
+            var temp = weather.current_weather.temperature;
+            var code = weather.current_weather.weathercode;
+            var desc = 'Ceu limpo';
+            if (code > 0 && code <= 3) desc = 'Parcialmente nublado';
+            if (code >= 45 && code <= 48) desc = 'Neblina';
+            if (code >= 51 && code <= 67) desc = 'Chuva';
+            if (code >= 71 && code <= 77) desc = 'Neve';
+            if (code >= 80 && code <= 82) desc = 'Pancadas de chuva';
+            if (code >= 95) desc = 'Tempestade';
+            titleEl.textContent = 'Clima em ' + cidade;
+            valueEl.textContent = Math.round(temp) + 'C';
+            descEl.textContent = desc;
+            done();
+          });
+        });
+      } else {
+        titleEl.textContent = 'Widget';
+        valueEl.textContent = '';
+        done();
+      }
+    }
+
+    // =============================================
+    // CARREGAR PLAYLIST
+    // =============================================
+    function loadPlaylist(playlistId, callback) {
+      var path = 'playlist_items?playlist_id=eq.' + playlistId + '&order=order_index.asc&select=duration_ms,order_index,midias(type,url)';
+      supabaseGet(path, function(err, items) {
+        if (err || !items || items.length === 0) { callback([]); return; }
+        var list = [];
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i];
+          if (item.midias) {
+            list.push({
+              type: item.midias.type,
+              url: item.midias.url,
+              duration: item.duration_ms || 7000
+            });
+          }
+        }
+        callback(list);
+      });
+    }
+
+    // =============================================
+    // INICIALIZAÇÃO
+    // =============================================
+    function init() {
+      var code = getCode();
+      var codeScreen = document.getElementById('code-screen');
+      var playerEl   = document.getElementById('player');
+      var codeDisplay = document.getElementById('code-display');
+
+      codeDisplay.textContent = code || 'SEM CODIGO';
+
+      if (!code) {
+        document.getElementById('status-text').textContent = 'Adicione ?code=XXXX na URL da TV.';
+        return;
+      }
+
+      supabaseGet('telas?codigo=eq.' + code + '&limit=1', function(err, data) {
+        if (err || !data || data.length === 0) {
+          document.getElementById('status-text').textContent = 'Codigo nao encontrado. Cadastre esta TV no painel.';
+          return;
+        }
+
+        var tela = data[0];
+        telaId = tela.id;
+        cidade = tela.cidade || 'Sao Paulo';
+
+        // Marcar como online
+        supabasePatch('telas?id=eq.' + telaId, { status: 'active', last_ping: new Date().toISOString() });
+
+        // Ping a cada 1 minuto
+        setInterval(function() {
+          supabasePatch('telas?id=eq.' + telaId, { status: 'active', last_ping: new Date().toISOString() });
+        }, 60000);
+
+        if (!tela.playlist_id) {
+          codeScreen.style.display = '-webkit-box';
+          codeScreen.style.display = '-ms-flexbox';
+          codeScreen.style.display = 'flex';
+          playerEl.style.display = 'none';
+          document.getElementById('status-text').textContent = 'TV cadastrada! Vincule uma playlist no painel.';
+          return;
+        }
+
+        loadPlaylist(tela.playlist_id, function(list) {
+          if (list.length === 0) {
+            document.getElementById('status-text').textContent = 'Playlist vazia. Adicione midias no painel.';
+            return;
+          }
+          playlist = list;
+          currentIndex = 0;
+          codeScreen.style.display = 'none';
+          playerEl.style.display = '-webkit-box';
+          playerEl.style.display = '-ms-flexbox';
+          playerEl.style.display = 'flex';
+          showMedia(playlist[0]);
+
+          // Verifica atualização de playlist a cada 30s (polling)
+          pollInterval = setInterval(function() {
+            supabaseGet('telas?id=eq.' + telaId + '&limit=1', function(e, rows) {
+              if (e || !rows || rows.length === 0) return;
+              var updated = rows[0];
+              if (updated.playlist_id && updated.playlist_id !== tela.playlist_id) {
+                tela.playlist_id = updated.playlist_id;
+                loadPlaylist(updated.playlist_id, function(newList) {
+                  playlist = newList;
+                  currentIndex = 0;
+                  if (playlist.length > 0) showMedia(playlist[0]);
+                });
+              }
+            });
+          }, 30000);
+        });
+      });
+    }
+
+    // Aguarda a pagina carregar completamente antes de iniciar
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      init();
+    } else {
+      document.addEventListener('DOMContentLoaded', init);
+    }
+  </script>
+</body>
+</html>
