@@ -36,6 +36,7 @@ CREATE TABLE telas (
     name TEXT NOT NULL,
     playlist_id UUID REFERENCES playlists(id) ON DELETE SET NULL,
     status TEXT DEFAULT 'inactive', -- 'active' | 'inactive'
+    cidade TEXT DEFAULT 'São Paulo', -- Para widget de clima
     last_ping TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -68,6 +68,11 @@ const Telas = () => {
     carregarDados();
   };
 
+  const mudarCidade = async (telaId: string, novaCidade: string) => {
+    await supabase.from('telas').update({ cidade: novaCidade }).eq('id', telaId);
+    carregarDados();
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
@@ -139,6 +144,17 @@ const Telas = () => {
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="mb-6 flex-1">
+                  <div className="input-label mb-2">Cidade (Previsão do Tempo)</div>
+                  <input 
+                    type="text"
+                    className="input-field" 
+                    defaultValue={tela.cidade || "São Paulo"}
+                    onBlur={(e) => mudarCidade(tela.id, e.target.value)}
+                    placeholder="Ex: Rio de Janeiro"
+                  />
                 </div>
                 
                 <div className="flex gap-2" style={{ marginTop: 'auto' }}>
