@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MonitorPlay, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, MonitorPlay, ExternalLink, RefreshCw, Trash2, Tv2, Monitor } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -157,13 +157,40 @@ const Telas = () => {
                   />
                 </div>
                 
+                {/* Links de acesso */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div className="input-label mb-2">Links de Acesso</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <a
+                      href={`/tv.html?code=${tela.codigo}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-secondary"
+                      style={{ width: '100%', justifyContent: 'flex-start', gap: '0.5rem', fontSize: '0.8rem' }}
+                      title="Para TVs LG, Samsung antigas e navegadores legados"
+                    >
+                      <Tv2 size={15} color="#f59e0b" />
+                      <span style={{ flex: 1 }}>TV Antiga (LG, Samsung...)</span>
+                      <ExternalLink size={13} style={{ opacity: 0.5 }} />
+                    </a>
+                    <Link
+                      to={`/player/${tela.codigo}`}
+                      target="_blank"
+                      className="btn btn-secondary"
+                      style={{ width: '100%', justifyContent: 'flex-start', gap: '0.5rem', fontSize: '0.8rem' }}
+                      title="Para TVs modernas, Chromecast e navegadores modernos"
+                    >
+                      <Monitor size={15} color="#3b82f6" />
+                      <span style={{ flex: 1 }}>TV Moderna / Chromecast</span>
+                      <ExternalLink size={13} style={{ opacity: 0.5 }} />
+                    </Link>
+                  </div>
+                </div>
+
                 <div className="flex gap-2" style={{ marginTop: 'auto' }}>
-                  <button className="btn btn-danger" style={{ padding: '0.625rem' }} onClick={() => deletarTela(tela.id)} title="Excluir Tela">
-                    <Trash2 size={16} />
+                  <button className="btn btn-danger" style={{ padding: '0.625rem', flex: 1 }} onClick={() => deletarTela(tela.id)} title="Excluir Tela">
+                    <Trash2 size={16} /> Excluir
                   </button>
-                  <Link to={`/player/${tela.codigo}`} target="_blank" className="btn btn-primary" style={{ flex: 1, padding: '0.625rem' }} title="Abrir Player de TV">
-                    <ExternalLink size={16} /> Abrir Tela
-                  </Link>
                 </div>
               </div>
             );
