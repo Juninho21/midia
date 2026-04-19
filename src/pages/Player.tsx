@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { WidgetBar } from '../components/WidgetBar';
+import { WidgetDisplay } from '../components/WidgetDisplay';
 
 interface MediaItem {
   type: string;
@@ -186,10 +186,9 @@ const Player = () => {
           onEnded={() => setCurrentMediaIndex((prev) => (prev + 1) % playlist.length)}
           onError={() => setCurrentMediaIndex((prev) => (prev + 1) % playlist.length)} // Pula se erro
         />
+      ) : media.type === 'widget' ? (
+        <WidgetDisplay cidade={telaInfo?.cidade || 'São Paulo'} widgetUrl={media.url} key={media.url + currentMediaIndex} />
       ) : null}
-      
-      {/* Barra de Widgets (Dólar, Bitcoin, Clima) */}
-      <WidgetBar cidade={telaInfo?.cidade || 'São Paulo'} />
     </div>
   );
 };
